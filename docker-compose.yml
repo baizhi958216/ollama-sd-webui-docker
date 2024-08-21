@@ -1,55 +1,82 @@
-x-base_service: &base_service
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:cuda
+    container_name: open-webui
     ports:
-      - "${WEBUI_PORT:-7860}:7860"
+      - "3200:8080"
     volumes:
-      - &v1 ./data:/data
-      - &v2 ./output:/output
-    stop_signal: SIGKILL
-    tty: true
+      - open-webui:/app/backend/data
     deploy:
       resources:
         reservations:
           devices:
-              - driver: nvidia
-                device_ids: ['0']
-                capabilities: [compute, utility]
-
-name: webui-docker
-
-services:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always
+    depends_on:
+      - ollama
+      - comfy
+      - auto
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  comfy:
+    image: sd-comfy:7
+    container_name: comfy
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./data:/data
+      - ./output:/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    build: ./services/comfy/
+    environment:
+      - CLI_ARGS=
+  auto:
+    image: sd-auto:78
+    build: ./services/AUTOMATIC1111
+    environment:
+      # - CLI_ARGS=--allow-code --medvram --xformers --enable-insecure-extension-access --api
+      - CLI_ARGS=--allow-code --medvram --xformers --api --api-auth baizhi958216:baizhi958216
+    container_name: auto
+    ports:
+      - "7861:7860"
+    volumes:
+      - ./data:/data
+      - ./output:/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
   download:
     build: ./services/download/
     profiles: ["download"]
     volumes:
-      - *v1
+      - ./data:/data
 
-  auto: &automatic
-    <<: *base_service
-    profiles: ["auto"]
-    build: ./services/AUTOMATIC1111
-    image: sd-auto:78
-    environment:
-      - CLI_ARGS=--allow-code --medvram --xformers --enable-insecure-extension-access --api
-
-  auto-cpu:
-    <<: *automatic
-    profiles: ["auto-cpu"]
-    deploy: {}
-    environment:
-      - CLI_ARGS=--no-half --precision full --allow-code --enable-insecure-extension-access --api
-
-  comfy: &comfy
-    <<: *base_service
-    profiles: ["comfy"]
-    build: ./services/comfy/
-    image: sd-comfy:7
-    environment:
-      - CLI_ARGS=
-
-
-  comfy-cpu:
-    <<: *comfy
-    profiles: ["comfy-cpu"]
-    deploy: {}
-    environment:
-      - CLI_ARGS=--cpu
+volumes:
+  open-webui:
+  ollama:
+  comfy:
+  auto:
