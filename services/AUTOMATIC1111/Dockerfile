@@ -52,6 +52,8 @@ ENV LD_PRELOAD=libtcmalloc.so
 
 COPY . /docker
 
+RUN pip install --upgrade typing-extensions
+
 RUN \
   # mv ${ROOT}/style.css ${ROOT}/user.css && \
   # one of the ugliest hacks I ever wrote \
