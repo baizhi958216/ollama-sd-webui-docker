@@ -16,7 +16,6 @@ services:
     restart: always
     depends_on:
       - ollama
-      - comfy
       - auto
   ollama:
     image: ollama/ollama
@@ -32,30 +31,12 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-  comfy:
-    image: sd-comfy:7
-    container_name: comfy
-    ports:
-      - "7860:7860"
-    volumes:
-      - ./data:/data
-      - ./output:/output
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    build: ./services/comfy/
-    environment:
-      - CLI_ARGS=
   auto:
     image: sd-auto:78
     build: ./services/AUTOMATIC1111
     environment:
       # - CLI_ARGS=--allow-code --medvram --xformers --enable-insecure-extension-access --api
-      - CLI_ARGS=--allow-code --medvram --xformers --api --api-auth baizhi958216:baizhi958216
+      - CLI_ARGS=--allow-code --medvram --xformers --api --api-auth baizhi958216:baizhi958216 --enable-insecure-extension-access
     container_name: auto
     ports:
       - "7861:7860"
@@ -69,14 +50,8 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-  download:
-    build: ./services/download/
-    profiles: ["download"]
-    volumes:
-      - ./data:/data
 
 volumes:
   open-webui:
   ollama:
-  comfy:
   auto:
